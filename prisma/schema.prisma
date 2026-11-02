@@ -1,0 +1,135 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. Role Karyawan Internal
+enum Role {
+  OWNER
+  ADMIN
+  KASIR
+  BARISTA
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EmploymentStatus {
+  ACTIVE 
+  INACTIVE
+}
+
+// 2. Sumber Pesanan (Omni-channel)
+enum OrderSource {
+  DINE_IN
+  TAKEAWAY
+}
+
+// 3. Status Pesanan di Dapur
+enum OrderStatus {
+  PENDING   // Baru masuk / belum dibayar
+  QUEUE     // Sudah bayar, masuk antrean barista
+  PREPARING // Sedang dibuat oleh barista
+  COMPLETED // Sudah diserahkan ke pelanggan/driver
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  QRIS
+}
+
+model User {
+  id        Int   @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     
+  status    UserStatus @default(PENDING)
+  employstatus EmploymentStatus @default(ACTIVE) 
+  outletId  Int? 
+  outlet    Outlet?   @relation(fields: [outletId], references: [id])
+  orders    Order[]  // Relasi: Mengetahui kasir mana yang menginput order ini
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Outlet {
+  id        Int    @id @default(autoincrement())
+  name      String
+  address   String
+  code      String   @unique
+  createdAt   DateTime @default(now())
+  users     User[]
+  products  Product[]
+  orders    Order[]
+}
+
+model Category {
+  id        Int    @id @default(autoincrement())
+  name      String    @unique
+  createdAt   DateTime @default(now())
+  products  Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  price       Int
+  sku         String?     @unique // Stock Keeping Unit (Kode Produk)
+  categoryId  Int
+  category    Category    @relation(fields: [categoryId], references: [id])
+  outletId    Int
+  outlet      Outlet      @relation(fields: [outletId], references: [id])
+  createdAt   DateTime @default(now())
+  orderItems  orderItem[]
+  @@unique([outletId, name])
+}
+
+model Order {
+  id           Int      @id @default(autoincrement())
+  invoiceNo    String      @unique // Contoh: INV-20231024-0001
+  customerName String?     // Nama pelanggan manual (input kasir)
+  source       OrderSource @default(DINE_IN)
+  status       OrderStatus @default(PENDING)
+  totalAmount  Int
+  
+  // Relasi Internal
+  outletId     Int
+  outlet       Outlet      @relation(fields: [outletId], references: [id])
+  userId       Int      // ID Kasir yang handle
+  kasir      User        @relation(fields: [userId], references: [id])
+  
+  orderItems   orderItem[]
+  payment      Payment?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model orderItem {
+  id        Int  @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Int // Harga saat dibeli (antisipasi kalau ke depan harga produk naik)
+  subtotal  Int
+  createdAt DateTime    @default(now())
+}
+
+model Payment {
+  id            Int   @id @default(autoincrement())
+  orderId       Int   @unique
+  order         Order    @relation(fields: [orderId], references: [id])
+  paymentMethod PaymentMethod   // CASH, QRIS
+  amountPaid    Int
+  change        Int  // Uang kembalian
+  createdAt     DateTime    @default(now())
+}
