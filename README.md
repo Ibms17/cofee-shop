@@ -2,12 +2,12 @@ Sistem POS & Manajemen Multi-Gerai Coffee Shop (Backend)
 
 Aplikasi backend berbasis Node.js dan Express untuk mengelola operasional multi-gerai coffee shop serta alur kerja Point-of-Sale (POS) secara terintegrasi. Proyek ini dibangun dengan komitmen penuh pada aturan bisnis (business logic) dunia nyata yang ketat, isolasi data, serta penanganan error-handling yang andal.
 
-🛠️ Status Proyek saat Ini (Project Status)
+Status Proyek saat Ini (Project Status)
 
 • Modul Inisiasi & Pembuatan (Create): Selesai 100% (Hasil pengembangan intensif selama 5 minggu untuk merancang fondasi arsitektur, relasi skema, logika keamanan, dan isolasi data).
 • Modul Get, Update, & Delete: Dalam tahap pengembangan lanjutan (refactoring bertahap dari basis arsitektur proyek manajemen kos sebelumnya).
 
-🚀 Tech Stack
+Tech Stack
 
 • Runtime Environment: Node.js
 • Web Framework: Express.js
@@ -15,7 +15,7 @@ Aplikasi backend berbasis Node.js dan Express untuk mengelola operasional multi-
 • ORM: Prisma ORM
 • API Testing & Verification: Postman
 
-📁 Struktur Repositori
+Struktur Repositori
 
 Proyek ini menerapkan pemisahan komponen (separation of concerns) yang bersih untuk menjaga kode tetap modular dan mudah di-debug:
 text
@@ -27,7 +27,7 @@ text
 └── prisma.config.ts     # Konfigurasi ORM Prisma
 Gunakan kode dengan hati-hati.
 
-🛠️ Fitur Utama & Logika Bisnis (Fase Pembuatan / Create)
+Fitur Utama & Logika Bisnis (Fase Pembuatan / Create)
 
 Sistem ini dirancang dengan aturan bisnis spesifik untuk menjaga integritas data operasional sejak data pertama kali dibuat:
 • Role-Based Access Control (RBAC) & Akses Berlapis: Otentikasi ketat yang memisahkan empat peran utama:
@@ -41,7 +41,7 @@ Sistem ini dirancang dengan aturan bisnis spesifik untuk menjaga integritas data
 	• State-Lock Post-Payment: Pesanan yang sudah berstatus lunas otomatis dikunci oleh sistem agar tidak dapat dibatalkan demi keamanan arus kas bisnis.
 	• Prisma $transaction: Menjamin seluruh rangkaian proses pembuatan pesanan (pembuatan struk, kalkulasi, pemotongan stok, dsb.) bersifat atomik—semuanya harus berhasil bersamaan atau dibatalkan seutuhnya jika terjadi kegagalan di tengah jalan (all-or-nothing).
 
-🔍 Praktik Debugging & Troubleshooting Mandiri
+Praktik Debugging & Troubleshooting Mandiri
 
 Guna menangani kendala teknis dan mendeteksi anomali pada terminal maupun Postman selama pengembangan, proyek ini menerapkan metodologi pelacakan yang disiplin:
 • Analisis Stack Trace: Mampu membaca baris dan kolom kode yang bermasalah langsung dari log error terminal untuk menelusuri akar masalah.
@@ -49,7 +49,7 @@ Guna menangani kendala teknis dan mendeteksi anomali pada terminal maupun Postma
 • Data Type & Schema Validation: Memeriksa ketidaksinkronan antar-file, seperti ketidakcocokan tipe data, nama model, dan atribut pada berkas schema.prisma.
 • API State Comparison & Hit Re-testing: Memanfaatkan Postman untuk menguji ulang endpoint API, memvalidasi parameter input, dan membandingkan struktur respons antara model yang berhasil di-hit dengan skenario kegagalan sistem.
 
-⚙️ Instalasi & Cara Menjalankan
+Instalasi & Cara Menjalankan
 
 1. Clone repositori ini:bash
 git clone https://github.com/Ibms17/cofee-shop.git
