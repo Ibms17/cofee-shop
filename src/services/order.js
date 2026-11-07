@@ -32,41 +32,42 @@ const generateInvoiceNo = async (tx, outletId) => {
 };
 
 const createOrder = async (user, data) => {
-    if (user.role !== 'KASIR' || !user.outletId) {
-        throw new AppError("Akses ditolak. Hanya KASIR aktif yang dapat membuat pesanan", 403);
+    // Pengecekan outletId (karena role kasir sudah dihandle di route middleware)
+    if (!user.outletId) {
+        throw new AppError("Akses ditolak. Pengguna internal wajib terikat dengan gerai/outlet", 403);
     }
 
     const { orderItems, customerName, orderType } = data;
 
     return await prisma.$transaction(async (tx) => {
-
-        const products = await tx.product.findMany({
+        const menus = await tx.menu.findMany({
             where: {
                 id: {
-                    in: orderItems.map(item => Number(item.productId))
+                    in: orderItems.map(item => Number(item.menuId))
                 },
                 outletId: user.outletId
             }
         });
 
-        const uniqueProductIdsInput = new Set(orderItems.map(item => Number(item.productId))).size;
-        if (products.length !== uniqueProductIdsInput) {
+        const uniqueMenuIdsInput = new Set(orderItems.map(item => Number(item.menuId))).size;
+        if (menus.length !== uniqueMenuIdsInput) {
             throw new AppError("Produk tidak valid atau tidak ditemukan di gerai Anda", 403);
         }
 
         const formattedOrderItems = orderItems.map(item => {
-            const product = products.find(p => p.id === Number(item.productId));
+            const menu = menus.find(p => p.id === Number(item.menuId));
 
-            if (!product) {
-                throw new AppError(`Produk dengan ID ${item.productId} tidak ditemukan`, 404);
+            if (!menu) {
+                throw new AppError(`Produk dengan ID ${item.menuId} tidak ditemukan`, 404);
             }
 
             return {
-                productId: product.id,
-                name: product.name,
+                menuId: menu.id,
+                name: menu.name,
                 quantity: item.quantity,
-                price: product.price,
-                subtotal: product.price * item.quantity
+                price: menu.price,
+                subtotal: menu.price * item.quantity,
+                notes: item.notes
             };
         });
 
@@ -77,8 +78,9 @@ const createOrder = async (user, data) => {
 
         const invoiceNo = await generateInvoiceNo(tx, user.outletId);
 
-        // 1. Simpan ke Database + Ambil Informasi Relasi Nama Kasir & Nama Outlet
-        const savedOrder = await tx.order.create({
+        // 1. Simpan ke Database 
+        // Lakukan relasi bertingkat ke brand melalu outlet
+        const saveOrder = await tx.order.create({
             data: {
                 outletId: user.outletId,
                 userId: user.id,
@@ -91,36 +93,107 @@ const createOrder = async (user, data) => {
                     create: formattedOrderItems.map(({ name, ...rest }) => rest)
                 }
             },
-            // Otomatis JOIN ke tabel User dan Outlet menggunakan Eager Loading Prisma
+            // Eager Loading: Tarik outlet, lalu tarik brand di dalamnya untuk mengambil 'name'
             include: {
-                kasir: {
-                    select: {
-                        name: true // Sesuaikan dengan nama field di tabel User Anda (name atau nama)
-                    }
-                },
+                kasir: { select: { name: true } },
                 outlet: {
-                    select: {
-                        name: true // Sesuaikan dengan nama field di tabel Outlet Anda (name atau nama)
+                    include: {
+                        brand: { select: { name: true } }
                     }
                 }
             }
         });
 
-        // 2. FORMAT DATA RESPON (Hanya menyajikan data yang Anda butuhkan untuk struk)
+        // 2. FORMAT DATA RESPON (Menggunakan nama brand, bukan nama outlet)
         return {
-            namaOutlet: savedOrder.outlet?.name || "Gerai Utama",
-            invoiceNo: savedOrder.invoiceNo,
-            createdAt: savedOrder.createdAt,
-            namaKasir: savedOrder.kasir?.name || user.name || "Kasir",
+            orderId: saveOrder.id,
+            namaBrand: saveOrder.outlet?.brand?.name || "Kopisop", // <--- Mengembalikan nama brand
+            invoiceNo: saveOrder.invoiceNo,
+            createdAt: saveOrder.createdAt,
             items: formattedOrderItems.map(item => ({
                 namaProduk: item.name,
                 qty: item.quantity,
                 harga: item.price,
-                subtotal: item.subtotal
+                subtotal: item.subtotal,
+                catatan: item.notes || "-"
             })),
-            totalHarga: savedOrder.totalAmount
+            totalHarga: saveOrder.totalAmount
         };
     });
 };
 
-module.exports = { createOrder };
+const getAllOrders = async (user, query) => {
+    const { status, page = 1, limit = 10 } = query;
+
+    const whereFilter = {
+        outletId: user.outletId
+    };
+
+    if (status) {
+        whereFilter.status = status;
+    }
+
+    const parsedLimit = parseInt(limit, 10);
+    const skip = (parseInt(page, 10) - 1) * parsedLimit;
+
+    const orders = await prisma.order.findMany({
+        where: whereFilter,
+        skip: skip,
+        take: parsedLimit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+            orderItems: {
+                include: { menu: { select: { name: true } } }
+            }
+        }
+    });
+
+    return orders;
+};
+
+const getOrderById = async (id, user) => {
+    const order = await prisma.order.findUnique({
+        where: {
+            id: Number(id),
+            outletId: user.outletId
+        },
+        include: {
+            orderItems: {
+                include: { menu: { select: { name: true } } }
+            }
+        }
+    });
+
+    if (!order) {
+        throw new AppError("Order tidak ditemukan di gerai Anda", 404);
+    }
+
+    return order;
+};
+
+const updateOrderStatus = async (id, newStatus, user) => {
+    const allowedStatuses = ['PENDING', 'QUEUE', 'PREPARING', 'COMPLETED', 'CANCELLED'];
+    if (!allowedStatuses.includes(newStatus)) {
+        throw new AppError("Status pesanan tidak valid", 400);
+    }
+
+    const order = await prisma.order.findUnique({
+        where: {
+            id: Number(id),
+            outletId: user.outletId
+        }
+    });
+
+    if (!order) {
+        throw new AppError("Order tidak ditemukan di gerai Anda", 404);
+    }
+
+    const updatedOrder = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: newStatus }
+    });
+
+    return updatedOrder;
+};
+
+module.exports = { createOrder, getAllOrders, getOrderById, updateOrderStatus };

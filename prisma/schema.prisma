@@ -60,14 +60,21 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Brand {
+  id        Int   @id @default(autoincrement())
+  name      String
+  outlets   Outlet[]
+}
+
 model Outlet {
   id        Int    @id @default(autoincrement())
-  name      String
+  brandId   Int 
+  brand     Brand    @relation(fields: [brandId], references: [id])
   address   String
   code      String   @unique
   createdAt   DateTime @default(now())
   users     User[]
-  products  Product[]
+  menus  Menu[]
   orders    Order[]
 }
 
@@ -75,10 +82,10 @@ model Category {
   id        Int    @id @default(autoincrement())
   name      String    @unique
   createdAt   DateTime @default(now())
-  products  Product[]
+  menus  Menu[]
 }
 
-model Product {
+model Menu {
   id          Int      @id @default(autoincrement())
   name        String
   price       Int
@@ -116,11 +123,12 @@ model orderItem {
   id        Int  @id @default(autoincrement())
   orderId   Int
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  menuId Int
+  menu   Menu @relation(fields: [menuId], references: [id])
   quantity  Int
   price     Int // Harga saat dibeli (antisipasi kalau ke depan harga produk naik)
   subtotal  Int
+  notes     String?
   createdAt DateTime    @default(now())
 }
 

@@ -2,15 +2,19 @@ const { z } = require('zod');
 
 // 📦 A. SKEMA VALIDASI UNTUK SETIAP ITEM (OrderItem)
 const orderItemSchema = z.object({
-    productId: z
-        .coerce.number({ required_error: "ID Produk wajib dilampirkan!" })
-        .int({ message: "Format ID Produk tidak valid!" }), // Wajib UUID valid
+    menuId: z
+        .coerce.number({ required_error: "ID Menu wajib dilampirkan!" })
+        .int({ message: "Format ID Menu tidak valid!" }), // Wajib UUID valid
 
     quantity: z
         .number({ required_error: "Jumlah barang harus angka bulat!" })
         .int({ message: "Jumlah barang harus berupa angka bulat!" }) // Anti desimal
         .positive({ message: "Jumlah barang minimal harus 1!" }) // Anti 0 dan minus
         .default(1)
+        .optional(),
+    notes: z
+        .string()
+        .trim()
         .optional(),
 });
 
@@ -32,7 +36,7 @@ const orderSchema = z.object({
     // Validasi Array: Memastikan kasir mengirimkan minimal 1 item belanjaan
     orderItems: z
         .array(orderItemSchema)
-        .nonempty({ message: "Keranjang belanja tidak boleh kosong! Masukkan minimal 1 produk." }),
+        .nonempty({ message: "Cart tidak boleh kosong! Masukkan minimal 1 produk." }),
 });
 
 module.exports = { orderItemSchema, orderSchema };

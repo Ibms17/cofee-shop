@@ -6,7 +6,5 @@ const verifyToken = require('../middlewares/auth.js');
 
 router.post('/', [verifyToken, authorize("OWNER")], categoryController.create);
 router.get('/', categoryController.getAll);
-router.put('/', authorize, categoryController.update);
-router.delete('/', authorize, categoryController.destroy);
 
 module.exports = router;

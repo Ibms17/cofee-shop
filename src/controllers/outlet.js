@@ -3,7 +3,7 @@ const { createSchema, updateSchema } = require('../validators/outlet.js'); // As
 
 // CREATE: Membuat Kedai Baru
 const create = async (req, res) => {
-    // Validasi Input
+
     const validation = createSchema.safeParse(req.body);
     if (!validation.success) {
         const errorPesan = validation.error.issues.map(issue => issue.message).join(", ");
@@ -21,19 +21,16 @@ const getAll = async (req, res) => {
     return res.status(200).json({ success: true, data: outlets });
 };
 
-// READ ONE: Mengambil Detail 1 Konser Berdasarkan ID
 const getById = async (req, res) => {
     const { id } = req.params;
     const outlet = await outletService.getOutletById(Number(id));
     return res.status(200).json({ success: true, data: outlet });
 };
 
-// UPDATE: Mengubah Data Konser
 const update = async (req, res) => {
     const { id } = req.params;
 
-    // Validasi Input
-    const validation = updateSchema.safeParse(req.body);
+    const validation = updateSchema.safeParse(req.body, req.user);
     if (!validation.success) {
         const errorPesan = validation.error.issues.map(issue => issue.message).join(", ");
         return res.status(400).json({ success: false, error: errorPesan });

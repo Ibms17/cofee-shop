@@ -1,26 +1,32 @@
 const prisma = require('../config/db.js');
 
 const createOutlet = async (data) => {
-    const { name, address } = data;
+    const { address } = data;
+    const defaultBrand = await prisma.brand.findFirst();
 
     const lastOutlet = await prisma.outlet.findFirst({
         orderBy: { id: 'desc' }
     });
 
     const nextNumber = (lastOutlet?.id ?? 0) + 1;
-    const code = `CAFE${String(nextNumber).padStart(3, '0')}`;
+    const code = `CAFE${String(nextNumber).padStart(4, '0')}`;
 
     return prisma.outlet.create({
-        data: { name, address, code }
+        data: {
+            code,
+            address,
+            brandId: defaultBrand.id // Otomatis terikat ke brand utama
+        },
+        include: {
+            brand: { select: { name: true } } // Menampilkan nama brand pada respons
+        }
     });
 };
 
 const getAllOutlets = async (kriteriaQuery) => {
-    // ⚡ SEKARANG HANYA MENGAMBIL PARAMETER SEARCH
     const { search } = kriteriaQuery;
     let kondisiWhere = {};
 
-    // A. SEARCH GANDA: Cari berdasarkan kode outlet ATAU alamat outlet
     if (search) {
         kondisiWhere.OR = [
             { code: { contains: search, mode: 'insensitive' } },
@@ -28,10 +34,9 @@ const getAllOutlets = async (kriteriaQuery) => {
         ];
     }
 
-    // 🚀 SYNTAX AKHIR: Ramping tanpa ada orderBy (sorting)
     return await prisma.outlet.findMany({
         where: kondisiWhere,
-        include: { products: true } // Menyertakan daftar menu produk yang terikat di outlet ini
+        include: { products: true }
     });
 };
 

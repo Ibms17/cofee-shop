@@ -18,6 +18,16 @@ async function main() {
     });
 
     console.log('✅ Sukses! Akun Owner tunggal yang berdiri di atas seluruh outlet berhasil ditanam.');
+
+
+    await prisma.brand.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+            name: 'Kopisop'
+        }
+    });
+    console.log('✅ Brand berhasil ditanam');
 }
 main().catch((e) => {
     console.error(e);

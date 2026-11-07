@@ -16,11 +16,4 @@ const getAllCategories = async () => {
     return await prisma.category.findMany();
 };
 
-const updateOutlet = async (id, address) => {
-    return await prisma.outlet.update({
-        where: { id: parseInt(id) },
-        data: { address }
-    });
-};
-
-module.exports = { createCategory, getAllCategories, updateOutlet };
+module.exports = { createCategory, getAllCategories };
