@@ -5,33 +5,41 @@ const createMenu = async (data, user) => {
     const { name, price, categoryId } = data;
 
     // 1. Validasi Kategori wajib ada di sistem
-    const category = await prisma.category.findUnique({
-        where: { id: categoryId }
-    });
-    if (!category) {
-        throw new AppError("Kategori tidak ditemukan", 404);
-    }
-
-    const existName = await prisma.menu.findFirst({
-        where: { name, outletId: user.outletId }
-    });
-    if (existName) {
-        throw new AppError("Nama menu sudah terdaftar di gerai Anda!", 400);
-    }
-
-    const lastMenu = await prisma.menu.findFirst({ orderBy: { id: 'desc' } });
-    const nextNumber = (lastMenu?.id ?? 0) + 1;
-    const sku = `${String(nextNumber).padStart(4, '0')}`;
-
-    return await prisma.menu.create({
-        data: {
-            name,
-            price: Number(price),
-            sku,
-            categoryId: Number(categoryId),
-            outletId: user.outletId
+    return await prisma.$transaction(async (tx) => {
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId }
+        });
+        if (!category) {
+            throw new AppError("Kategori tidak ditemukan", 404);
         }
-    });
+
+        const existName = await prisma.menu.findFirst({
+            where: { name, outletId: user.outletId }
+        });
+        if (existName) {
+            throw new AppError("Nama menu sudah terdaftar di gerai Anda!", 400);
+        }
+
+        const lastMenu = await prisma.menu.findFirst({ orderBy: { id: 'desc' } });
+        const nextNumber = (lastMenu?.id ?? 0) + 1;
+        const sku = `${String(nextNumber).padStart(4, '0')}`;
+
+        return await prisma.menu.create({
+            data: {
+                name,
+                price: Number(price),
+                sku,
+                categoryId: Number(categoryId),
+                outletId: user.outletId
+            }
+        });
+    },
+        {
+            // Mencegah dua transaksi membaca baris terakhir yang sama secara bersamaan
+            isolationLevel: 'Serializable'
+        }
+    );
+
 };
 
 const getAllMenus = async (user, kriteriaQuery) => {
@@ -63,7 +71,7 @@ const getAllMenus = async (user, kriteriaQuery) => {
 };
 
 const updateMenu = async (id, data, user) => {
-    const { name, description, price } = data;
+    const { name, price } = data;
 
     const menu = await prisma.menu.findFirst({
         where: { id: Number(id), outletId: user.outletId }
@@ -74,7 +82,7 @@ const updateMenu = async (id, data, user) => {
 
     return await prisma.menu.update({
         where: { id: menu.id },
-        data: { name, description, price: Number(price) }
+        data: { name, price: Number(price) }
     });
 };
 

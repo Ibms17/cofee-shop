@@ -1,29 +1,46 @@
 const prisma = require('../config/db.js');
+const AppError = require('../utils/error.js');
 
-const approveAdmin = async (id, outletId) => {
-    // 1. Cari akun yang akan disetujui
+const approveStaffByRole = async (id, outletId, expectedRole) => {
+    if (!outletId) {
+        throw new AppError("ID Gerai (outletId) wajib diisi saat menyetujui akun.", 400);
+    }
+
+    // Pastikan gerai tujuan benar-benar ada di database
+    const outlet = await prisma.outlet.findUnique({
+        where: { id: Number(outletId) }
+    });
+
+    if (!outlet) {
+        throw new AppError("Gerai (outlet) tidak ditemukan.", 404);
+    }
+
+    // Cari akun yang akan disetujui
     const user = await prisma.user.findUnique({
         where: { id: Number(id) }
     });
 
     if (!user) {
-        throw new Error("Akun Admin tidak ditemukan.");
+        throw new AppError(`Akun ${expectedRole} tidak ditemukan.`, 404);
     }
 
-    // 2. Pastikan akun tersebut memang Admin
-    if (user.role !== "ADMIN") {
-        throw new Error("Akun yang dipilih bukan Admin.");
+    // Pastikan role akun sesuai dengan endpoint yang dipanggil
+    if (user.role !== expectedRole) {
+        throw new AppError(`Akun yang dipilih bukan ${expectedRole}.`, 400);
     }
 
-    // 3. Pastikan statusnya masih menunggu persetujuan
+    // Pastikan statusnya masih PENDING
     if (user.status !== "PENDING") {
-        throw new Error("Status Admin bukan PENDING.");
+        throw new AppError(`Status ${expectedRole} bukan PENDING (saat ini: ${user.status}).`, 400);
     }
 
-    // 4. Setujui registrasi
+    // Setujui registrasi dan ikat ke outletId
     return await prisma.user.update({
         where: { id: user.id },
-        data: { outletId: Number(outletId), status: "APPROVED" },
+        data: {
+            outletId: Number(outletId),
+            status: "APPROVED"
+        },
         select: {
             id: true,
             name: true,
@@ -35,74 +52,14 @@ const approveAdmin = async (id, outletId) => {
     });
 };
 
-const approveKasir = async (id, outletId) => {
-    // 1. Cari akun yang akan disetujui
-    const user = await prisma.user.findUnique({
-        where: { id: Number(id) }
-    });
+// 2. Fungsi pembungkus (wrapper) agar controller lama tetap berjalan tanpa diubah
+const approveAdmin = (id, outletId) => approveStaffByRole(id, outletId, "ADMIN");
+const approveKasir = (id, outletId) => approveStaffByRole(id, outletId, "KASIR");
+const approveBarista = (id, outletId) => approveStaffByRole(id, outletId, "BARISTA");
 
-    if (!user) {
-        throw new Error("Akun Kasir tidak ditemukan.");
-    }
-
-    // 2. Pastikan akun tersebut memang Admin
-    if (user.role !== "KASIR") {
-        throw new Error("Akun yang dipilih bukan Kasir.");
-    }
-
-    // 3. Pastikan statusnya masih menunggu persetujuan
-    if (user.status !== "PENDING") {
-        throw new Error("Status Kasir bukan PENDING.");
-    }
-
-    // 4. Setujui registrasi
-    return await prisma.user.update({
-        where: { id: user.id },
-        data: { outletId: Number(outletId), status: "APPROVED" },
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            outletId: true,
-            status: true
-        }
-    });
+module.exports = {
+    approveStaffByRole,
+    approveAdmin,
+    approveKasir,
+    approveBarista
 };
-
-const approveBarista = async (id, outletId) => {
-    // 1. Cari akun yang akan disetujui
-    const user = await prisma.user.findUnique({
-        where: { id: Number(id) }
-    });
-
-    if (!user) {
-        throw new Error("Akun Barista tidak ditemukan.");
-    }
-
-    // 2. Pastikan akun tersebut memang Admin
-    if (user.role !== "BARISTA") {
-        throw new Error("Akun yang dipilih bukan Barista.");
-    }
-
-    // 3. Pastikan statusnya masih menunggu persetujuan
-    if (user.status !== "PENDING") {
-        throw new Error("Status Barista bukan PENDING.");
-    }
-
-    // 4. Setujui registrasi
-    return await prisma.user.update({
-        where: { id: user.id },
-        data: { outletId: Number(outletId), status: "APPROVED" },
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            outletId: true,
-            status: true
-        }
-    });
-};
-
-module.exports = { approveAdmin, approveKasir, approveBarista };

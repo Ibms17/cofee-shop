@@ -1,15 +1,19 @@
 const prisma = require('../src/config/db.js');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
 async function main() {
-    const passwordOwner = await bcrypt.hash('ibms220898', 10);
+    const ownerEmail = process.env.SEED_OWNER_EMAIL;
+    const rawPassword = process.env.SEED_OWNER_PASSWORD;
+
+    const passwordOwner = await bcrypt.hash(rawPassword, 10);
 
     await prisma.user.upsert({
-        where: { email: 'ibmswarbawa@gmail.com' },
+        where: { email: ownerEmail },
         update: {},
         create: {
-            email: 'ibmswarbawa@gmail.com',
             name: 'Ida Bagus Made Swarbawa',
+            email: ownerEmail,
             password: passwordOwner,
             role: 'OWNER',
             status: 'APPROVED',

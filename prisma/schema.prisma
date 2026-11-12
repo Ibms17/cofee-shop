@@ -139,5 +139,6 @@ model Payment {
   paymentMethod PaymentMethod   // CASH, QRIS
   amountPaid    Int
   change        Int  // Uang kembalian
+  donationAmount Int @default(0)
   createdAt     DateTime    @default(now())
 }

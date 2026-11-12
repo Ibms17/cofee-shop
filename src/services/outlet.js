@@ -12,13 +12,13 @@ const createOutlet = async (data) => {
     const code = `CAFE${String(nextNumber).padStart(4, '0')}`;
 
     return prisma.outlet.create({
-        data: {
-            code,
-            address,
-            brandId: defaultBrand.id // Otomatis terikat ke brand utama
-        },
         include: {
             brand: { select: { name: true } } // Menampilkan nama brand pada respons
+        },
+        data: {
+            brandId: defaultBrand.id,
+            code,
+            address
         }
     });
 };

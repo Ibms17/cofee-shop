@@ -39,18 +39,27 @@ const createOrder = async (user, data) => {
 
     const { orderItems, customerName, orderType } = data;
 
+    // ---> TAMBAHKAN DI SINI (Sebelum masuk ke $transaction) <---
+    const menuIds = orderItems.map(item => Number(item.menuId));
+    const uniqueMenuIds = new Set(menuIds);
+
+    if (menuIds.length !== uniqueMenuIds.size) {
+        throw new AppError("Terdapat duplikasi menuId dalam pesanan. Gabungkan jumlah (quantity) pada item yang sama.", 400);
+    }
+    // ---------------------------------------------------------
+
     return await prisma.$transaction(async (tx) => {
         const menus = await tx.menu.findMany({
             where: {
                 id: {
-                    in: orderItems.map(item => Number(item.menuId))
+                    in: menuIds // Bisa langsung pakai variabel menuIds di atas
                 },
                 outletId: user.outletId
             }
         });
 
-        const uniqueMenuIdsInput = new Set(orderItems.map(item => Number(item.menuId))).size;
-        if (menus.length !== uniqueMenuIdsInput) {
+        // Bandingkan jumlah menu yang ditemukan dengan uniqueMenuIds.size
+        if (menus.length !== uniqueMenuIds.size) {
             throw new AppError("Produk tidak valid atau tidak ditemukan di gerai Anda", 403);
         }
 
@@ -79,7 +88,7 @@ const createOrder = async (user, data) => {
         const invoiceNo = await generateInvoiceNo(tx, user.outletId);
 
         // 1. Simpan ke Database 
-        // Lakukan relasi bertingkat ke brand melalu outlet
+        // Lakukan relasi bertingkat ke brand melalui outlet
         const saveOrder = await tx.order.create({
             data: {
                 outletId: user.outletId,
@@ -107,7 +116,7 @@ const createOrder = async (user, data) => {
         // 2. FORMAT DATA RESPON (Menggunakan nama brand, bukan nama outlet)
         return {
             orderId: saveOrder.id,
-            namaBrand: saveOrder.outlet?.brand?.name || "Kopisop", // <--- Mengembalikan nama brand
+            namaBrand: saveOrder.outlet?.brand?.name || "Kopisop",
             invoiceNo: saveOrder.invoiceNo,
             createdAt: saveOrder.createdAt,
             items: formattedOrderItems.map(item => ({
@@ -172,6 +181,42 @@ const getOrderById = async (id, user) => {
 };
 
 const updateOrderStatus = async (id, newStatus, user) => {
+    // 1. Aturan transisi status khusus dapur (State Machine)
+    const allowedTransitions = {
+        QUEUE: ['PREPARING'],
+        PREPARING: ['COMPLETED'],
+    };
+
+    // 2. Cari pesanan di gerai Barista yang sedang login
+    const order = await prisma.order.findFirst({
+        where: {
+            id: Number(id),
+            outletId: user.outletId,
+        },
+    });
+
+    if (!order) {
+        throw new AppError("Order tidak ditemukan di gerai Anda.", 404);
+    }
+
+    // 3. Pastikan perpindahan status mengikuti urutan dapur yang sah
+    const validNextStatuses = allowedTransitions[order.status] || [];
+    if (!validNextStatuses.includes(newStatus)) {
+        throw new AppError(
+            `Tidak dapat mengubah status pesanan dari ${order.status} menjadi ${newStatus}.`,
+            400
+        );
+    }
+
+    // 4. Perbarui status pesanan
+    return await prisma.order.update({
+        where: { id: order.id },
+        data: { status: newStatus },
+    });
+};
+
+//salah
+/* const updateOrderStatus = async (id, newStatus, user) => {
     const allowedStatuses = ['PENDING', 'QUEUE', 'PREPARING', 'COMPLETED', 'CANCELLED'];
     if (!allowedStatuses.includes(newStatus)) {
         throw new AppError("Status pesanan tidak valid", 400);
@@ -194,6 +239,6 @@ const updateOrderStatus = async (id, newStatus, user) => {
     });
 
     return updatedOrder;
-};
+}; */
 
 module.exports = { createOrder, getAllOrders, getOrderById, updateOrderStatus };

@@ -5,6 +5,7 @@ const outletRoutes = require('./routes/outlet.js');
 const categoryRoutes = require('./routes/category.js');
 const menuRoutes = require('./routes/menu.js');
 const orderRoutes = require('./routes/order.js');
+const { startOrderCleanupJob } = require('./jobs/orderclean.js');
 const paymentRoutes = require('./routes/payment.js');
 const { error } = require('./middlewares/error.js');
 
@@ -24,4 +25,5 @@ app.use(error);
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server cafe berjalan di http://localhost:${PORT}`);
+  startOrderCleanupJob();
 });
