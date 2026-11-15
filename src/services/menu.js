@@ -6,25 +6,25 @@ const createMenu = async (data, user) => {
 
     // 1. Validasi Kategori wajib ada di sistem
     return await prisma.$transaction(async (tx) => {
-        const category = await prisma.category.findUnique({
-            where: { id: categoryId }
+        const category = await tx.category.findUnique({
+            where: { id: Number(categoryId) }
         });
         if (!category) {
             throw new AppError("Kategori tidak ditemukan", 404);
         }
 
-        const existName = await prisma.menu.findFirst({
+        const existName = await tx.menu.findFirst({
             where: { name, outletId: user.outletId }
         });
         if (existName) {
             throw new AppError("Nama menu sudah terdaftar di gerai Anda!", 400);
         }
 
-        const lastMenu = await prisma.menu.findFirst({ orderBy: { id: 'desc' } });
+        const lastMenu = await tx.menu.findFirst({ orderBy: { id: 'desc' } });
         const nextNumber = (lastMenu?.id ?? 0) + 1;
         const sku = `${String(nextNumber).padStart(4, '0')}`;
 
-        return await prisma.menu.create({
+        return await tx.menu.create({
             data: {
                 name,
                 price: Number(price),
@@ -39,7 +39,6 @@ const createMenu = async (data, user) => {
             isolationLevel: 'Serializable'
         }
     );
-
 };
 
 const getAllMenus = async (user, kriteriaQuery) => {

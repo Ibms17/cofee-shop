@@ -13,7 +13,7 @@ const registerUser = async (dataSaringanZod) => {
     // 1. Validasi duplikasi email di database Neon
     const emailExist = await prisma.user.findUnique({ where: { email } });
 
-    if (emailExist) throw new Error("Email tersebut sudah terdaftar! Gunakan email lain.");
+    if (emailExist) throw new AppError("Email tersebut sudah terdaftar! Gunakan email lain.", 400);
 
 
     // 2. Acak password mentah menjadi kode rahasia 10 lapis

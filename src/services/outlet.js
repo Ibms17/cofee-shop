@@ -36,7 +36,7 @@ const getAllOutlets = async (kriteriaQuery) => {
 
     return await prisma.outlet.findMany({
         where: kondisiWhere,
-        include: { products: true }
+        include: { menus: true }
     });
 };
 
