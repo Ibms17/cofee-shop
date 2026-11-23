@@ -1,8 +1,12 @@
 const prisma = require('../config/db.js');
+const AppError = require('../utils/error.js');
 
 const createOutlet = async (data) => {
     const { address } = data;
     const defaultBrand = await prisma.brand.findFirst();
+    if (!defaultBrand) {
+        throw new AppError("Brand belum ada", 404);
+    }
 
     const lastOutlet = await prisma.outlet.findFirst({
         orderBy: { id: 'desc' }

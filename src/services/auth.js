@@ -36,10 +36,10 @@ const loginUser = async (dataSaringanZod) => {
     const user = await prisma.user.findUnique({ where: { email } });
     //if (user.status !== 'APPROVED') {
     //return res.status(403).json({ message: 'Akun Anda belum disetujui oleh Owner.' });}
-    if (!user) throw new AppError("Email tidak ditemukan!");
+    if (!user) throw new AppError("Email tidak ditemukan!", 401);
 
     const passwordValid = await bcrypt.compare(password, user.password);
-    if (!passwordValid) throw new AppError("Password salah!");
+    if (!passwordValid) throw new AppError("Password salah!", 404);
 
     if (user.status !== "APPROVED") {
         throw new AppError("Akun Anda belum diapprove.", 403);

@@ -54,7 +54,8 @@ const createPayment = async (user, data) => {
                 orderId: order.id,
                 paymentMethod: paymentMethod,
                 amountPaid: Number(amountPaid),
-                change: change
+                change: change,
+                donationAmount: donationAmount
             }
         });
 
