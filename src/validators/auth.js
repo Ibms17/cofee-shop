@@ -12,12 +12,7 @@ const registerSchema = z.object({
   password: z
     .string({ required_error: "Password wajib diisi!" })
     .min(6, { message: "Password minimal harus terdiri dari 6 karakter!" }),
-  outletId: z
-    .coerce.number({ required_error: "ID Outlet wajib dilampirkan!" })
-    .int({ message: "ID Outlet harus berupa angka bulat!" })
-    .optional()
-    .or(z
-      .literal('')),
+
   role: z
     .enum(['ADMIN', 'KASIR', 'BARISTA']),
 });

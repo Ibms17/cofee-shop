@@ -134,8 +134,9 @@ const createOrder = async (user, data) => {
 const getAllOrders = async (user, query) => {
     const { status, page = 1, limit = 10 } = query;
 
-    const whereFilter = {
-        outletId: user.outletId
+    const whereFilter = {};
+    if (user.role !== "OWNER") {
+        whereFilter.outletId = user.outletId;
     };
 
     if (status) {
@@ -214,31 +215,5 @@ const updateOrderStatus = async (id, newStatus, user) => {
         data: { status: newStatus },
     });
 };
-
-//salah
-/* const updateOrderStatus = async (id, newStatus, user) => {
-    const allowedStatuses = ['PENDING', 'QUEUE', 'PREPARING', 'COMPLETED', 'CANCELLED'];
-    if (!allowedStatuses.includes(newStatus)) {
-        throw new AppError("Status pesanan tidak valid", 400);
-    }
-
-    const order = await prisma.order.findUnique({
-        where: {
-            id: Number(id),
-            outletId: user.outletId
-        }
-    });
-
-    if (!order) {
-        throw new AppError("Order tidak ditemukan di gerai Anda", 404);
-    }
-
-    const updatedOrder = await prisma.order.update({
-        where: { id: order.id },
-        data: { status: newStatus }
-    });
-
-    return updatedOrder;
-}; */
 
 module.exports = { createOrder, getAllOrders, getOrderById, updateOrderStatus };
